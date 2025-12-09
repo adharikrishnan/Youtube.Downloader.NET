@@ -367,3 +367,6 @@ FodyWeavers.xsd
 
 # Ignores the Executables for Folder as it's used for testing purposes.
 Executables/
+
+TestConsole/
+.vscode/

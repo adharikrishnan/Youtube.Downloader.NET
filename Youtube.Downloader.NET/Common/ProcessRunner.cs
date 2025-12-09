@@ -1,8 +1,7 @@
 using System.Diagnostics;
 using System.Text;
-using Youtube.Wrapper.NET.Common.Models;
 
-namespace Youtube.Wrapper.NET.Common;
+namespace Youtube.Downloader.NET.Common;
 
 /// <summary>
 /// Static Process Runner Class.
@@ -30,12 +29,12 @@ public static class ProcessRunner
     /// <param name="cancellationToken">The Optional Cancellation Token.</param>
     /// <returns>The Process Output Object containing Process Data.</returns>
 
-    public static async Task<ProcessOutput> RunAsync(string filePath, string arguments,
+    public static async Task<ProcessOutput> RunAsync(string filePath, string? arguments = null,
         CancellationToken cancellationToken = default)
     {
         Process process = new Process();
         process.StartInfo = SetStartInfo(filePath, arguments);
-        return await  RunProcessAsync(process, cancellationToken).ConfigureAwait(false);
+        return await RunProcessAsync(process, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -68,14 +67,14 @@ public static class ProcessRunner
         try
         {
             process.Start();
-            process?.WaitForExit();
+            process.WaitForExit();
 
-            return new ProcessOutput(process);
+            return new ProcessOutput(process, ProcessStatus.Success);
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"An error occured when trying to start process: {ex.Message}");
-            return new ProcessOutput(-1, String.Empty, ex.Message, ProcessStatus.Error);
+            return new ProcessOutput(process, ProcessStatus.Error, ex);
         }
         finally
         {
@@ -94,12 +93,12 @@ public static class ProcessRunner
         {
             process.Start();
             await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-            return new ProcessOutput(process);
+            return new ProcessOutput(process, ProcessStatus.Success);
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"An error occured when trying to start process: {ex.Message}");
-            return new ProcessOutput(-1, String.Empty, ex.Message, ProcessStatus.Error);
+            return new ProcessOutput(process, ProcessStatus.Error, ex);
         }
         finally
         {
