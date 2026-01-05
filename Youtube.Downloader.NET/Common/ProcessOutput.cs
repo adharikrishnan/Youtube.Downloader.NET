@@ -20,10 +20,10 @@ public class ProcessOutput
     /// <param name="process">The Process Instance.</param>
     public ProcessOutput(Process process, ProcessStatus status)
     {
-        this.ExitCode = process.ExitCode;
-        this.Output = process?.StandardOutput?.ReadToEnd();
-        this.Error = process?.StandardError?.ReadToEnd();
-        this.ProcessStatus = status;
+        ExitCode = process.ExitCode;
+        Output = process?.StandardOutput?.ReadToEnd();
+        Error = process?.StandardError?.ReadToEnd();
+        ProcessStatus = status;
     }
 
     /// <summary>
@@ -33,7 +33,7 @@ public class ProcessOutput
     public ProcessOutput(Process process, ProcessStatus status, Exception exception) 
     : this(process, status)
     {
-        this.Exception = exception;
+        Exception = exception;
     }
 
     /// <summary>
@@ -43,8 +43,8 @@ public class ProcessOutput
     /// <param name="status">The Process Status.</param>
     public ProcessOutput(int exitCode, ProcessStatus status)
     {
-        this.ExitCode = exitCode;
-        this.ProcessStatus = status;
+        ExitCode = exitCode;
+        ProcessStatus = status;
     }
 
     /// <summary>
