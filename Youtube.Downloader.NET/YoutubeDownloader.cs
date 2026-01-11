@@ -1,6 +1,5 @@
-using System.IO.Compression;
 using System.Net;
-using System.Text.Json;
+using System.Text;
 using Youtube.Downloader.NET.Common;
 using static Youtube.Downloader.NET.Common.Constants;
 
@@ -32,17 +31,17 @@ public class YoutubeDownloader
     public YoutubeDownloader(Platform platform, string ffmpegPath, string ytdlpPath, string downloadPath)
     {
         _platform = platform;
-        _ffmpegPath = ffmpegPath;
-        _ytdlpPath = ytdlpPath;
         _downloadPath = downloadPath;
+        _ffmpegPath = ffmpegPath.ValidatePath(Ffmpeg);
+        _ytdlpPath = ytdlpPath.ValidatePath(Ytdlp);
     }
 
     /// <summary>
     /// Sets up the dependencies (ffmpeg and yt-dlp).
-    /// If the executables are already present in the dependency folder
+    /// If the executables are already present in the dependency folder, the downloads are skipped.
     /// </summary>
-    /// <param name="ctx"></param>
-    public async Task SetupDependencies(CancellationToken ctx = default)
+    /// <param name="ctx">The Cancellation Token.</param>
+    private async Task ValidateDependencies(CancellationToken ctx = default)
     {
         // Creates the dependency directory if it does not exist
         Directory.CreateDirectory(_dependencyBasePath);
@@ -51,7 +50,7 @@ public class YoutubeDownloader
         // If not downloads them.
         var dependencies = Directory.GetFiles(_dependencyBasePath);
 
-        _ffmpegPath = dependencies.FirstOrDefault(x => Path.GetFileName(x).Contains("ffmpeg"), string.Empty);
+        _ffmpegPath = dependencies.FirstOrDefault(x => Path.GetFileName(x).Contains(Ffmpeg), string.Empty);
         _ytdlpPath = dependencies.FirstOrDefault(x => Path.GetFileName(x).Contains(_platform.ToYtdlpPlatformExeName()),
             string.Empty);
 
@@ -62,9 +61,18 @@ public class YoutubeDownloader
             await DownloadYtdlp(ctx: ctx).ConfigureAwait(false);
     }
 
-    public async Task DownloadVideoAsMp3Async(string url)
+    public async Task DownloadVideoAsMp3Async(string url, CancellationToken ctx  = default)
     {
-        var output = await ProcessRunner.RunAsync(_ytdlpPath, "--version").ConfigureAwait(false);
+        if(string.IsNullOrEmpty(_ffmpegPath) && string.IsNullOrEmpty(_ytdlpPath))
+            await ValidateDependencies(ctx).ConfigureAwait(false);
+
+        var output = await ProcessRunner
+            .RunAsync (
+                _ytdlpPath,
+                Helpers.CreateCommand(Mp3Template, _ffmpegPath, _downloadPath, url)
+                , null,
+                ctx)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -87,7 +95,7 @@ public class YoutubeDownloader
             var zipResponse = await client.GetAsync(zipUrl, ctx).ConfigureAwait(false);
 
             _ffmpegPath = await Helpers.ZipAndExtract(zipResponse, _dependencyBasePath, ctx).ConfigureAwait(false);
-            
+
             // Set the executable permissions for the downloaded binary.
             Helpers.SetExecutablePermissionByPlatform(_ffmpegPath, _platform);
         }
@@ -133,7 +141,7 @@ public class YoutubeDownloader
 
             await response.Content.CopyToAsync(fs, ctx).ConfigureAwait(false);
             _ytdlpPath = filePath;
-            
+
             // Set the executable permissions for the downloaded binary.
             Helpers.SetExecutablePermissionByPlatform(_ytdlpPath, _platform);
         }

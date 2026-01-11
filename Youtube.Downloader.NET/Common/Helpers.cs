@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using System.Text;
 
 namespace Youtube.Downloader.NET.Common;
 
@@ -88,5 +89,12 @@ public static class Helpers
         var rule = new FileSystemAccessRule(user, FileSystemRights.ExecuteFile, AccessControlType.Allow);
         fileSecurity.AddAccessRule(rule);
         FileSystemAclExtensions.SetAccessControl(fileInfo, fileSecurity);
+    }
+
+    public static string CreateCommand(string template, params string[] args)
+    {
+        var builder = new StringBuilder();
+        builder.AppendFormat(template, args);
+        return builder.ToString();
     }
 }

@@ -36,6 +36,14 @@ public static class Extensions
         };
         return JsonSerializer.Deserialize<T>(response, options);
     }
+
+    public static string ValidatePath(this string filePath, string pathType)
+    {
+        if(string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            throw new YoutubeDownloaderException($"YoutubeDownloader Exception: Path to {pathType} is invalid.");
+        
+        return filePath;
+    }
 }
 
     

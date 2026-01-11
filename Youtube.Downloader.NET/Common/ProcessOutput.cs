@@ -5,46 +5,26 @@ namespace Youtube.Downloader.NET.Common;
 /// <summary>
 /// Model class to return the output from a process in a standard form. 
 /// </summary>
-public class ProcessOutput
+public sealed class ProcessOutput
 {
     /// <summary>
-    /// Default Constructor
-    /// </summary>
-    public ProcessOutput()
-    {
-    }
-
-    /// <summary>
     /// Creates a new instance of the <see cref="ProcessOutput"/> Class with a given Process Instance.
     /// </summary>
-    /// <param name="process">The Process Instance.</param>
-    public ProcessOutput(Process process, ProcessStatus status)
+    public ProcessOutput(int exitCode, string standardOutput)
     {
-        ExitCode = process.ExitCode;
-        Output = process?.StandardOutput?.ReadToEnd();
-        Error = process?.StandardError?.ReadToEnd();
-        ProcessStatus = status;
-    }
-
-    /// <summary>
-    /// Creates a new instance of the <see cref="ProcessOutput"/> Class with a given Process Instance.
-    /// </summary>
-    /// <param name="process">The Process Instance.</param>
-    public ProcessOutput(Process process, ProcessStatus status, Exception exception) 
-    : this(process, status)
-    {
-        Exception = exception;
-    }
-
-    /// <summary>
-    /// Creates a new instance of the <see cref="ProcessOutput"/> Class with an Exit Code.
-    /// </summary>
-    /// <param name="exitCode">The Process Exit Code.</param>
-    /// <param name="status">The Process Status.</param>
-    public ProcessOutput(int exitCode, ProcessStatus status)
-    {
+        ProcessStatus = ProcessStatus.Success;
         ExitCode = exitCode;
-        ProcessStatus = status;
+        Output = standardOutput;
+    }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref="ProcessOutput"/> Class with a given Process Instance.
+    /// </summary>
+    public ProcessOutput(int exitCode, string errorOutput, Exception exception)
+    {
+        ProcessStatus = ProcessStatus.Error;
+        Error = errorOutput;
+        Exception = exception;
     }
 
     /// <summary>
