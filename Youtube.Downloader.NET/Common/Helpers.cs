@@ -91,7 +91,7 @@ public static class Helpers
         FileSystemAclExtensions.SetAccessControl(fileInfo, fileSecurity);
     }
 
-    public static string CreateCommand(string template, params string[] args)
+    public static string CreateCommand(string template, params object[] args)
     {
         var builder = new StringBuilder();
         builder.AppendFormat(template, args);

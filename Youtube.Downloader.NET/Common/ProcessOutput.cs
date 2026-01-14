@@ -10,27 +10,21 @@ public sealed class ProcessOutput
     /// <summary>
     /// Creates a new instance of the <see cref="ProcessOutput"/> Class with a given Process Instance.
     /// </summary>
-    public ProcessOutput(int exitCode, string standardOutput)
+    public ProcessOutput(string standardOutput)
     {
         ProcessStatus = ProcessStatus.Success;
-        ExitCode = exitCode;
         Output = standardOutput;
     }
 
     /// <summary>
     /// Creates a new instance of the <see cref="ProcessOutput"/> Class with a given Process Instance.
     /// </summary>
-    public ProcessOutput(int exitCode, string errorOutput, Exception exception)
+    public ProcessOutput(string errorOutput, Exception? exception)
     {
         ProcessStatus = ProcessStatus.Error;
         Error = errorOutput;
         Exception = exception;
     }
-
-    /// <summary>
-    /// The Exit Code as an Integer.
-    /// </summary>
-    public int ExitCode { get;}
 
     /// <summary>
     /// The Output from a process as a string.

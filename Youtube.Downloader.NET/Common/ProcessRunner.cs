@@ -71,13 +71,15 @@ public static class ProcessRunner
         {
             process.Start();
             process.WaitForExit();
-
-            return new ProcessOutput(process.ExitCode, process.StandardOutput.ReadToEnd());
+            
+            return process.ExitCode is 0 
+                ? new ProcessOutput(process.StandardOutput.ReadToEnd())
+                : new ProcessOutput(process.StandardError.ReadToEnd(), null);
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"An error occured when trying to start process: {ex.Message}");
-            return new ProcessOutput(process.ExitCode, process.StandardError.ReadToEnd(), ex);
+            return new ProcessOutput(process.StandardError.ReadToEnd(), ex);
         }
         finally
         {
@@ -89,9 +91,11 @@ public static class ProcessRunner
     /// Runs the provided process asynchronously.
     /// </summary>
     /// <param name="process">The Process Object.</param>
+    /// <param name="outputHandler">The Optional Output Handler.</param>
     /// <param name="ctx">The Cancellation Token</param>
     /// <returns>The Process Output.</returns>
-    private static async Task<ProcessOutput> RunProcessAsync(Process process, Action<string>? outputCallback = null,
+    private static async Task<ProcessOutput> 
+        RunProcessAsync(Process process, Action<string>? outputHandler = null,
         CancellationToken ctx = default)
     {
         var standardOutput = new StringBuilder();
@@ -101,32 +105,47 @@ public static class ProcessRunner
         {
             process.Start();
 
-            process.OutputDataReceived += (s, e) =>
-            {
-                standardOutput.AppendLine(e.Data);
-                outputCallback?.Invoke(e.Data);
-            };
-            
-            process.ErrorDataReceived += (s, e) =>
-            {
-                standardError.AppendLine(e.Data);
-                outputCallback?.Invoke(e.Data);
-            };
+            SetOutputHandlers(process, outputHandler, standardOutput, standardError);
             
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
             
             await process.WaitForExitAsync(ctx).ConfigureAwait(false);
-            return new ProcessOutput(process.ExitCode, standardOutput.ToString());
+            
+            return process.ExitCode is 0 
+                ? new ProcessOutput(standardOutput.ToString())
+                : new ProcessOutput(standardError.ToString(), null);
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"An error occured when trying to start process: {ex.Message}");
-            return new ProcessOutput(process.ExitCode, standardError.ToString(), ex);
+            return new ProcessOutput(standardError.ToString(), ex);
         }
         finally
         {
             process?.Dispose();
         }
+    }
+    
+    /// <summary>
+    /// Sets the Output handlers, with StringBuilders to get the Standard Output and Error info as strings.
+    /// </summary>
+    /// <param name="process">The Process</param>
+    /// <param name="outputHandler">The Optional Output Handler.</param>
+    /// <param name="standardOutput">The string builder to write the standard output to.</param>
+    /// <param name="standardError">The string builder to write the standard error to.</param>
+    private static void SetOutputHandlers(Process process, Action<string>? outputHandler, StringBuilder standardOutput, StringBuilder standardError)
+    {
+        process.OutputDataReceived += (s, e) =>
+        {
+            standardOutput.AppendLine(e.Data);
+            outputHandler?.Invoke(e.Data);
+        };
+            
+        process.ErrorDataReceived += (s, e) =>
+        {
+            standardError.AppendLine(e.Data);
+            outputHandler?.Invoke(e.Data);
+        };
     }
 }

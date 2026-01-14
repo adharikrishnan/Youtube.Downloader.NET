@@ -61,9 +61,9 @@ public class YoutubeDownloader
             await DownloadYtdlp(ctx: ctx).ConfigureAwait(false);
     }
 
-    public async Task DownloadVideoAsMp3Async(string url, CancellationToken ctx  = default)
+    public async Task DownloadVideoAsMp3Async(string url, CancellationToken ctx = default)
     {
-        if(string.IsNullOrEmpty(_ffmpegPath) && string.IsNullOrEmpty(_ytdlpPath))
+        if(string.IsNullOrEmpty(_ffmpegPath) || string.IsNullOrEmpty(_ytdlpPath))
             await ValidateDependencies(ctx).ConfigureAwait(false);
 
         var output = await ProcessRunner
@@ -73,6 +73,10 @@ public class YoutubeDownloader
                 , null,
                 ctx)
             .ConfigureAwait(false);
+
+        if (output.ProcessStatus is ProcessStatus.Error)
+            throw new YoutubeDownloaderException($"An error occured while trying to process download: ${output.Error}");
+        
     }
 
     /// <summary>

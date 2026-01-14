@@ -10,5 +10,5 @@ public static class Constants
     
     public const string Ytdlp = "yt-dlp";
 
-    public const string Mp3Template = "-x --audio-format mp3 -o \"%(title)s.%(ext)s\" --progress --newline --ffmpeg-location {0} -P {1} {2}";
+    public const string Mp3Template = "-x --audio-format {0} -o \"%(title)s.%(ext)s\" --progress --newline --ffmpeg-location {1} -P {2} {3}";
 }
