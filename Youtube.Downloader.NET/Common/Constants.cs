@@ -10,5 +10,9 @@ public static class Constants
     
     public const string Ytdlp = "yt-dlp";
 
-    public const string Mp3Template = "-x --audio-format {0} -o \"%(title)s.%(ext)s\" --progress --newline --ffmpeg-location {1} -P {2} {3}";
+    public const string SingleDownloadMp3Template = "-x --audio-format {0} -o \"%(title)s.%(ext)s\" --progress --newline --ffmpeg-location {1} -P {2} {3} {4}";
+    
+    public const string MultiDownloadMp3Template = "-x --audio-format {0} -o \"%(title)s.%(ext)s\" --progress --newline --ffmpeg-location {1} -P {2} {3} ";
+
+    public const string GetPlaylistTemplate = "--flat-playlist --print url {0}";
 }

@@ -8,6 +8,8 @@ namespace Youtube.Downloader.NET.Common;
 /// </summary>
 public static class ProcessRunner
 {
+    private static readonly SemaphoreSlim _semaphore = new(5, 10);
+    
     /// <summary>
     /// Runs the Process with the given path to application path and supplied arguments.
     /// </summary>
@@ -33,7 +35,6 @@ public static class ProcessRunner
         Action<string>? outputCallBack = null, CancellationToken ctx = default)
     {
         var process = new Process();
-
         process.StartInfo = SetStartInfo(filePath, arguments);
         return await RunProcessAsync(process, outputCallBack, ctx).ConfigureAwait(false);
     }
@@ -103,6 +104,8 @@ public static class ProcessRunner
         
         try
         {
+            Console.WriteLine($"Number of threads that can enter the semaphore: {_semaphore.CurrentCount}");
+            await _semaphore.WaitAsync(ctx).ConfigureAwait(false);
             process.Start();
 
             SetOutputHandlers(process, outputHandler, standardOutput, standardError);
@@ -124,6 +127,7 @@ public static class ProcessRunner
         finally
         {
             process?.Dispose();
+            _semaphore.Release();
         }
     }
     

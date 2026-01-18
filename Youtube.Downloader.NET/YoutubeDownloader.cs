@@ -1,6 +1,6 @@
 using System.Net;
-using System.Text;
 using Youtube.Downloader.NET.Common;
+using static Youtube.Downloader.NET.Common.Helpers;
 using static Youtube.Downloader.NET.Common.Constants;
 
 namespace Youtube.Downloader.NET;
@@ -36,6 +36,89 @@ public class YoutubeDownloader
         _ytdlpPath = ytdlpPath.ValidatePath(Ytdlp);
     }
 
+    public async Task DownloadAudioAsync(
+        string url,
+        AudioFormat format = AudioFormat.MP3,
+        string additionalFlags = "",
+        CancellationToken ctx = default)
+    {
+        if(string.IsNullOrEmpty(_ffmpegPath) || string.IsNullOrEmpty(_ytdlpPath))
+            await ValidateDependencies(ctx).ConfigureAwait(false);
+
+        var output = await ProcessRunner
+            .RunAsync (
+                _ytdlpPath,
+                CreateCommand(SingleDownloadMp3Template, format.ToString().ToLower(), _ffmpegPath, _downloadPath, additionalFlags, url), 
+                Console.WriteLine,
+                ctx: ctx)
+            .ConfigureAwait(false);
+
+        if (output.ProcessStatus is ProcessStatus.Error)
+            throw new YoutubeDownloaderException($"An error occured while trying to process download: ${output.Error}");
+        
+    }
+    
+    public async Task<IEnumerable<MultiDownloadResult>> DownloadAudioFromPlayList(
+        string url,
+        AudioFormat format = AudioFormat.MP3,
+        string additionalFlags = "",
+        CancellationToken ctx = default)
+    {
+        if(string.IsNullOrEmpty(_ffmpegPath) || string.IsNullOrEmpty(_ytdlpPath))
+            await ValidateDependencies(ctx).ConfigureAwait(false);
+
+        var playlistUrls = await GetPlayListUrls(url, ctx).ConfigureAwait(false);
+
+        var command = 
+            CreateCommand(SingleDownloadMp3Template, format.ToString().ToLower(), _ffmpegPath, _downloadPath,
+            additionalFlags);
+
+        var tasks = new List<Task<ProcessOutput>>();
+        var results = new List<MultiDownloadResult>();
+
+        foreach (var playlistUrl in playlistUrls)
+            tasks
+                .Add(ProcessRunner.RunAsync(_ytdlpPath, command + playlistUrl, Console.WriteLine, ctx: ctx));
+        
+        var taskResults = await Task.WhenAll(tasks).ConfigureAwait(false);
+        
+
+        for (int i = 0; i < playlistUrls.Length; i++)
+        {
+            results.Add(new MultiDownloadResult()
+            {
+                Url = playlistUrls[i],
+                IsDownloaded = taskResults[i].ProcessStatus is ProcessStatus.Success, 
+                Message = taskResults[i].Output,
+                ErrorMessage = taskResults[i].Error,
+            });
+        }
+
+        return results;
+    }
+    
+    /// <summary>
+    /// Get the List of URL for each video from a playlist
+    /// </summary>
+    /// <param name="url">The playlist url.</param>
+    /// <param name="ctx">The Cancellation Token.</param>
+    /// <returns>A list of urls.</returns>
+    /// <exception cref="YoutubeDownloaderException">Throws this exception when the retrieving the urls fail.</exception>
+    private async Task<string[]> GetPlayListUrls(string url, CancellationToken ctx = default)
+    {
+        var res = await ProcessRunner
+            .RunAsync (
+                _ytdlpPath,
+                CreateCommand(GetPlaylistTemplate ,url), 
+                Console.WriteLine,
+                ctx: ctx)
+            .ConfigureAwait(false);
+        
+        return res.ProcessStatus is ProcessStatus.Error 
+            ? throw new YoutubeDownloaderException($"An error occured while trying to get the playlist urls: ${res.Error}") 
+            : res!.Output!.Split('\n');
+    }
+    
     /// <summary>
     /// Sets up the dependencies (ffmpeg and yt-dlp).
     /// If the executables are already present in the dependency folder, the downloads are skipped.
@@ -47,7 +130,7 @@ public class YoutubeDownloader
         Directory.CreateDirectory(_dependencyBasePath);
 
         // Check if the executables are already present in the dependency folder
-        // If not downloads them.
+        // If not, downloads them.
         var dependencies = Directory.GetFiles(_dependencyBasePath);
 
         _ffmpegPath = dependencies.FirstOrDefault(x => Path.GetFileName(x).Contains(Ffmpeg), string.Empty);
@@ -59,24 +142,6 @@ public class YoutubeDownloader
 
         if (string.IsNullOrEmpty(_ytdlpPath))
             await DownloadYtdlp(ctx: ctx).ConfigureAwait(false);
-    }
-
-    public async Task DownloadVideoAsMp3Async(string url, CancellationToken ctx = default)
-    {
-        if(string.IsNullOrEmpty(_ffmpegPath) || string.IsNullOrEmpty(_ytdlpPath))
-            await ValidateDependencies(ctx).ConfigureAwait(false);
-
-        var output = await ProcessRunner
-            .RunAsync (
-                _ytdlpPath,
-                Helpers.CreateCommand(Mp3Template, _ffmpegPath, _downloadPath, url)
-                , null,
-                ctx)
-            .ConfigureAwait(false);
-
-        if (output.ProcessStatus is ProcessStatus.Error)
-            throw new YoutubeDownloaderException($"An error occured while trying to process download: ${output.Error}");
-        
     }
 
     /// <summary>
@@ -98,10 +163,10 @@ public class YoutubeDownloader
 
             var zipResponse = await client.GetAsync(zipUrl, ctx).ConfigureAwait(false);
 
-            _ffmpegPath = await Helpers.ZipAndExtract(zipResponse, _dependencyBasePath, ctx).ConfigureAwait(false);
+            _ffmpegPath = await ZipAndExtract(zipResponse, _dependencyBasePath, ctx).ConfigureAwait(false);
 
             // Set the executable permissions for the downloaded binary.
-            Helpers.SetExecutablePermissionByPlatform(_ffmpegPath, _platform);
+            SetExecutablePermissionByPlatform(_ffmpegPath, _platform);
         }
         catch (HttpRequestException e)
         {
